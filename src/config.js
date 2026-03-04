@@ -4,7 +4,7 @@
 
 export const GOOGLE_CONFIG = {
   // Google Cloud Console → 憑證 → OAuth 2.0 用戶端 ID
-  CLIENT_ID: 'YOUR_CLIENT_ID_HERE.apps.googleusercontent.com',
+  CLIENT_ID: '959248905540-ad4f3gmq4eb33sgvi43vi40q0upkhqta.apps.googleusercontent.com',
 
   // 需要的 API 權限
   SCOPES: 'https://www.googleapis.com/auth/spreadsheets',
