@@ -4,7 +4,7 @@
 
 export const GOOGLE_CONFIG = {
   // Google Cloud Console → 憑證 → OAuth 2.0 用戶端 ID
-  CLIENT_ID: '959248905540-ad4f3gmq4eb33sgvi43vi40q0upkhqta.apps.googleusercontent.com',
+  CLIENT_ID: 'YOUR_CLIENT_ID_HERE.apps.googleusercontent.com',
 
   // 需要的 API 權限
   SCOPES: 'https://www.googleapis.com/auth/spreadsheets',
@@ -16,6 +16,9 @@ export const GOOGLE_CONFIG = {
 // ====================================================
 // 應用程式設定（可以之後在 UI 裡調整）
 // ====================================================
+
+// 固定試算表 ID，確保所有裝置同步到同一份資料
+export const FIXED_SHEET_ID = '1ePYwTPeHWm7tN6MINVDDO1gqNZtJwCgT7CUktJUfJiE';
 
 export const DEFAULT_DAILY_BUDGET = 300;
 

@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { STORAGE_KEYS } from '../config';
+import { STORAGE_KEYS, FIXED_SHEET_ID } from '../config';
 import { generateId } from '../utils/budget';
 
 const SHEET_NAME = 'Records';
@@ -11,7 +11,7 @@ const HEADERS = ['id', 'date', 'item', 'category', 'amount'];
 export function useSheets(isSignedIn) {
   const [records, setRecords] = useState([]);
   const [sheetId, setSheetId] = useState(
-    () => localStorage.getItem(STORAGE_KEYS.SHEET_ID) || null
+    () => FIXED_SHEET_ID || localStorage.getItem(STORAGE_KEYS.SHEET_ID) || null
   );
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [dataError, setDataError] = useState(null);
@@ -65,29 +65,21 @@ export function useSheets(isSignedIn) {
     }
   }, [sheetId]);
 
-  // ── 初始化：確保試算表存在，然後載入資料 ──────────────
+  // ── 初始化：直接使用固定試算表 ID，確保跨裝置同步 ──────
   const initSheet = useCallback(async () => {
     setIsLoadingData(true);
     try {
-      let sid = sheetId;
-      if (!sid) {
-        sid = await createSpreadsheet();
-      } else {
-        // 確認試算表是否還存在
-        try {
-          await window.gapi.client.sheets.spreadsheets.get({ spreadsheetId: sid });
-        } catch {
-          // 試算表不存在，重新建立
-          sid = await createSpreadsheet();
-        }
-      }
+      const sid = FIXED_SHEET_ID || sheetId;
+      if (!sid) throw new Error('找不到試算表 ID');
+      // 確認試算表存在
+      await window.gapi.client.sheets.spreadsheets.get({ spreadsheetId: sid });
       await loadRecords(sid);
     } catch (err) {
       setDataError('初始化失敗：' + (err.result?.error?.message || err.message));
     } finally {
       setIsLoadingData(false);
     }
-  }, [sheetId, createSpreadsheet, loadRecords]);
+  }, [sheetId, loadRecords]);
 
   // ── 新增紀錄 ──────────────────────────────────────────
   const addRecord = useCallback(async ({ date, item, category, amount }) => {
