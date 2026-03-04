@@ -1,5 +1,5 @@
 const CACHE_NAME = 'meal-tracker-v1';
-const urlsToCache = ['/meal-tracker/'];
+const urlsToCache = ['/MealTracker/'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
