@@ -1,11 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
 import { GOOGLE_CONFIG } from '../config';
 
-const AUTO_SIGNIN_KEY = 'mealtracker_autosignin';
-
 /**
  * 管理 Google OAuth2 登入狀態
- * 使用 Google Identity Services (GIS) + gapi
+ *
+ * 自動登入架構（兩層）：
+ *  1. google.accounts.id (One Tap) — 用瀏覽器 cookie 確認身分，可跨分頁存活
+ *  2. oauth2.initTokenClient     — 取得 Sheets API 用的 Access Token
+ *
+ * 流程：One Tap 靜默確認身分 → token client 靜默取 access token → 登入完成
+ * 若 One Tap 無法自動選擇帳號 → 顯示登入畫面，等使用者手動點擊
  */
 export function useAuth() {
   const [isSignedIn, setIsSignedIn] = useState(false);
@@ -13,62 +17,50 @@ export function useAuth() {
   const [error, setError] = useState(null);
   const [tokenClient, setTokenClient] = useState(null);
 
-  // 初始化 gapi + GIS
   useEffect(() => {
     const initGapi = async () => {
       try {
-        // 等待 gapi 載入
         await new Promise((resolve) => window.gapi.load('client', resolve));
-
-        // 初始化 gapi client
         await window.gapi.client.init({
           discoveryDocs: [GOOGLE_CONFIG.DISCOVERY_DOC],
         });
 
-        // 初始化 GIS token client
+        // ── Token client：拿到 access token 後設為已登入 ──
         const client = window.google.accounts.oauth2.initTokenClient({
           client_id: GOOGLE_CONFIG.CLIENT_ID,
           scope: GOOGLE_CONFIG.SCOPES,
           callback: (response) => {
-            // callback 有回來，清掉 timeout
-            if (client._autoSignInTimeout) {
-              clearTimeout(client._autoSignInTimeout);
-              client._autoSignInTimeout = null;
-            }
             if (response.error) {
-              if (response.error === 'interaction_required' ||
-                  response.error === 'access_denied') {
-                localStorage.removeItem(AUTO_SIGNIN_KEY);
-              }
               setError(response.error);
               setIsSignedIn(false);
-              setIsLoading(false);
             } else {
-              localStorage.setItem(AUTO_SIGNIN_KEY, '1');
               setIsSignedIn(true);
               setError(null);
-              setIsLoading(false);
             }
+            setIsLoading(false);
+          },
+        });
+        setTokenClient(client);
+
+        // ── One Tap：用 cookie 靜默確認身分，成功後觸發 token client ──
+        window.google.accounts.id.initialize({
+          client_id: GOOGLE_CONFIG.CLIENT_ID,
+          auto_select: true,           // 有唯一帳號時完全靜默
+          cancel_on_tap_outside: false,
+          callback: () => {
+            // 身分確認，靜默取 access token（不彈任何視窗）
+            client.requestAccessToken({ prompt: '' });
           },
         });
 
-        setTokenClient(client);
-
-        // 嘗試自動登入（曾授權過 → 靜默取得 token，不彈視窗）
-        const hasAutoSignIn = localStorage.getItem(AUTO_SIGNIN_KEY);
-        if (hasAutoSignIn) {
-          // 設定 5 秒 timeout：若 Google callback 沒回來，fallback 到手動登入
-          // 注意：不清除 flag，下次開啟還是會嘗試自動登入
-          const timeout = setTimeout(() => {
+        // prompt() 嘗試自動選帳號；若無法自動選則觸發 notification callback
+        window.google.accounts.id.prompt((notification) => {
+          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+            // One Tap 無法自動選帳號（未登入 Google 或需要互動）→ 顯示登入畫面
             setIsLoading(false);
-          }, 5000);
-
-          // 將 timeout 暫存，callback 成功時清掉
-          client._autoSignInTimeout = timeout;
-          client.requestAccessToken({ prompt: '' });
-        } else {
-          setIsLoading(false);
-        }
+          }
+          // isDisplayMoment = 顯示了 One Tap UI，等使用者點擊，不動 loading
+        });
 
       } catch (err) {
         setError('Google API 初始化失敗：' + err.message);
@@ -76,9 +68,8 @@ export function useAuth() {
       }
     };
 
-    // 確保 gapi 和 google 都已載入
     const checkReady = setInterval(() => {
-      if (window.gapi && window.google?.accounts?.oauth2) {
+      if (window.gapi && window.google?.accounts?.oauth2 && window.google?.accounts?.id) {
         clearInterval(checkReady);
         initGapi();
       }
@@ -87,23 +78,21 @@ export function useAuth() {
     return () => clearInterval(checkReady);
   }, []);
 
+  // 手動登入：點按鈕後跳出 Google 帳號選擇
   const signIn = useCallback(() => {
     if (tokenClient) {
-      // 手動登入：第一次用 consent，之後用 select_account 讓使用者選帳號
-      const hasAutoSignIn = localStorage.getItem(AUTO_SIGNIN_KEY);
-      tokenClient.requestAccessToken({
-        prompt: hasAutoSignIn ? 'select_account' : 'consent',
-      });
+      tokenClient.requestAccessToken({ prompt: 'select_account' });
     }
   }, [tokenClient]);
 
+  // 登出：撤銷 token + 清除 One Tap cookie session
   const signOut = useCallback(() => {
     const token = window.gapi.client.getToken();
     if (token) {
       window.google.accounts.oauth2.revoke(token.access_token);
       window.gapi.client.setToken(null);
     }
-    localStorage.removeItem(AUTO_SIGNIN_KEY); // 登出時清除自動登入記錄
+    window.google.accounts.id.disableAutoSelect(); // 清除 One Tap 記憶，下次不自動登入
     setIsSignedIn(false);
   }, []);
 
