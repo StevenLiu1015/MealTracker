@@ -27,7 +27,7 @@ function groupByDate(records) {
 }
 
 function formatDate(dateStr) {
-  const d = new Date(dateStr);
+  const d = new Date(dateStr + 'T00:00:00');
   const days = ['日', '一', '二', '三', '四', '五', '六'];
   return `${d.getMonth() + 1}/${d.getDate()} (${days[d.getDay()]})`;
 }
@@ -36,57 +36,52 @@ function todayStr() {
   return TODAY.toISOString().slice(0, 10);
 }
 
-// ── HP Bar ────────────────────────────────────────────────────────
-function HpBar({ remaining, totalBudget }) {
+// ── Budget Bar ────────────────────────────────────────────────────
+function BudgetBar({ remaining, totalBudget }) {
   const pct = Math.max(0, Math.min(100, (remaining / totalBudget) * 100));
   const isLow = pct < 10;
   const isMid = pct >= 10 && pct < 20;
-  const barColor = isLow ? '#ef4444' : isMid ? '#f59e0b' : '#22c55e';
-  const trackColor = isLow ? '#fef2f2' : isMid ? '#fffbeb' : '#f0fdf4';
+  const barColor = isLow ? '#ef4444' : isMid ? '#f59e0b' : '#4ade80';
   const [blink, setBlink] = useState(false);
 
   useEffect(() => {
     if (!isLow) { setBlink(false); return; }
-    const t = setInterval(() => setBlink((b) => !b), 500);
+    const t = setInterval(() => setBlink((b) => !b), 600);
     return () => clearInterval(t);
   }, [isLow]);
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
-        <span style={{
-          fontFamily: "'Press Start 2P'", fontSize: 22, color: barColor, letterSpacing: -1,
-        }}>
-          {remaining >= 0 ? `¥${remaining}` : `-¥${Math.abs(remaining)}`}
-        </span>
-        <span style={{ fontFamily: "'Press Start 2P'", fontSize: 9, color: '#9ca3af' }}>
-          / {totalBudget}
-        </span>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 12 }}>
+        <div>
+          <div style={{ fontSize: 12, color: '#888', marginBottom: 2, fontWeight: 600 }}>本月剩餘預算</div>
+          <div style={{ fontSize: 36, fontWeight: 800, color: isLow ? '#ef4444' : '#1a1a2e', lineHeight: 1 }}>
+            {remaining >= 0 ? `¥${remaining}` : `-¥${Math.abs(remaining)}`}
+          </div>
+        </div>
+        <div style={{ fontSize: 13, color: '#aaa', fontWeight: 600 }}>/ ¥{totalBudget}</div>
       </div>
 
       <div style={{
-        width: '100%', height: 18, background: trackColor,
-        border: '2px solid', borderColor: isLow ? '#fca5a5' : isMid ? '#fcd34d' : '#86efac',
-        position: 'relative', overflow: 'hidden',
+        width: '100%', height: 14, background: '#f0ebe0',
+        borderRadius: 999, overflow: 'hidden',
+        border: '2px solid #1a1a2e',
       }}>
         <div style={{
           height: '100%', width: `${pct}%`, background: barColor,
-          transition: 'width 0.5s cubic-bezier(0.4,0,0.2,1)', position: 'relative',
-        }}>
-          <div style={{ position: 'absolute', top: 2, left: 4, right: 4, height: 3, background: 'rgba(255,255,255,0.45)' }} />
-          {Array.from({ length: 30 }).map((_, i) => (
-            <div key={i} style={{ position: 'absolute', top: 0, left: `${i * (100 / 30)}%`, width: 1, height: '100%', background: 'rgba(255,255,255,0.2)' }} />
-          ))}
-        </div>
+          borderRadius: 999,
+          transition: 'width 0.6s cubic-bezier(0.4,0,0.2,1)',
+        }} />
       </div>
 
       {isLow && (
         <p style={{
-          fontFamily: "'Press Start 2P'", fontSize: 7, color: '#ef4444',
-          marginTop: 7, textAlign: 'center',
-          opacity: blink ? 1 : 0.35, transition: 'opacity 0.15s', letterSpacing: 2,
+          fontSize: 11, color: '#ef4444', fontWeight: 700,
+          marginTop: 8, textAlign: 'center',
+          opacity: blink ? 1 : 0.3, transition: 'opacity 0.2s',
+          letterSpacing: 1,
         }}>
-          ！ LOW BUDGET WARNING ！
+          ⚠️ 預算快用完了！
         </p>
       )}
     </div>
@@ -94,17 +89,14 @@ function HpBar({ remaining, totalBudget }) {
 }
 
 // ── Loading ───────────────────────────────────────────────────────
-function LoadingScreen({ text = 'LOADING...' }) {
+function LoadingScreen({ text = '載入中...' }) {
   return (
     <div style={{
-      minHeight: '100vh', background: '#f5f0e8',
-      backgroundImage: `
-        repeating-linear-gradient(0deg, transparent, transparent 23px, #00000008 23px, #00000008 24px),
-        repeating-linear-gradient(90deg, transparent, transparent 23px, #00000008 23px, #00000008 24px)
-      `,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      minHeight: '100vh', background: '#f5f0e6',
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16,
     }}>
-      <p style={{ fontFamily: "'Press Start 2P'", fontSize: 9, color: '#9ca3af', letterSpacing: 3 }}>{text}</p>
+      <div style={{ fontSize: 40 }}>🍽️</div>
+      <p style={{ fontSize: 14, color: '#aaa', fontWeight: 600, letterSpacing: 1 }}>{text}</p>
     </div>
   );
 }
@@ -113,30 +105,47 @@ function LoadingScreen({ text = 'LOADING...' }) {
 function LoginScreen({ onSignIn, error }) {
   return (
     <div style={{
-      minHeight: '100vh', background: '#f5f0e8',
-      backgroundImage: `
-        repeating-linear-gradient(0deg, transparent, transparent 23px, #00000008 23px, #00000008 24px),
-        repeating-linear-gradient(90deg, transparent, transparent 23px, #00000008 23px, #00000008 24px)
-      `,
+      minHeight: '100vh', background: '#f5f0e6',
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 20,
+      padding: '0 24px',
     }}>
-      <p style={{ fontFamily: "'Press Start 2P'", fontSize: 16, color: '#1f2937', letterSpacing: 2 }}>🍽 MEAL TRACKER</p>
-      <p style={{ fontFamily: "'Noto Sans TC'", fontSize: 13, color: '#9ca3af' }}>資料儲存於你的 Google Sheets</p>
-      {error && (
-        <p style={{ fontFamily: "'Noto Sans TC'", fontSize: 12, color: '#ef4444', background: '#fef2f2', border: '2px solid #fca5a5', padding: '8px 14px' }}>
-          {error}
-        </p>
-      )}
-      <button
-        onClick={onSignIn}
-        style={{
-          fontFamily: "'Press Start 2P'", fontSize: 10, cursor: 'pointer',
-          padding: '14px 28px', color: '#1f2937', border: '3px solid #1f2937',
-          background: '#facc15', boxShadow: '4px 4px 0 #1f2937', letterSpacing: 2,
+      <div style={{
+        background: '#fff', border: '3px solid #1a1a2e',
+        borderRadius: 24, padding: '40px 32px',
+        boxShadow: '6px 6px 0 #1a1a2e',
+        width: '100%', maxWidth: 360,
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20,
+      }}>
+        <div style={{ fontSize: 52 }}>🍜</div>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: 22, fontWeight: 800, color: '#1a1a2e' }}>餐費追蹤器</div>
+          <div style={{ fontSize: 13, color: '#aaa', marginTop: 4 }}>資料儲存於你的 Google Sheets</div>
+        </div>
+        {error && (
+          <div style={{
+            fontSize: 12, color: '#ef4444', background: '#fef2f2',
+            border: '2px solid #fca5a5', borderRadius: 12,
+            padding: '8px 14px', textAlign: 'center', width: '100%',
+          }}>
+            {error}
+          </div>
+        )}
+        <button onClick={onSignIn} style={{
+          width: '100%', padding: '14px',
+          fontSize: 15, fontWeight: 800, cursor: 'pointer',
+          color: '#1a1a2e', border: '3px solid #1a1a2e',
+          borderRadius: 14, background: '#fbbf24',
+          boxShadow: '4px 4px 0 #1a1a2e',
+          transition: 'transform 0.1s, box-shadow 0.1s',
         }}
-      >
-        ▶ SIGN IN
-      </button>
+          onMouseDown={e => { e.currentTarget.style.transform = 'translate(2px,2px)'; e.currentTarget.style.boxShadow = '2px 2px 0 #1a1a2e'; }}
+          onMouseUp={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '4px 4px 0 #1a1a2e'; }}
+          onTouchStart={e => { e.currentTarget.style.transform = 'translate(2px,2px)'; e.currentTarget.style.boxShadow = '2px 2px 0 #1a1a2e'; }}
+          onTouchEnd={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '4px 4px 0 #1a1a2e'; }}
+        >
+          Google 登入
+        </button>
+      </div>
     </div>
   );
 }
@@ -200,27 +209,28 @@ export default function App() {
     setEditingId(null);
   }
 
-  // ── Screens ──
-  if (authLoading) return <LoadingScreen text="LOADING..." />;
+  if (authLoading) return <LoadingScreen text="載入中..." />;
   if (!isSignedIn) return <LoginScreen onSignIn={signIn} error={authError} />;
-  if (isLoadingData) return <LoadingScreen text="SYNCING..." />;
+  if (isLoadingData) return <LoadingScreen text="同步資料中..." />;
 
   const categoryList = CATEGORIES || ['早餐', '午餐', '晚餐', '飲料', '零食'];
 
+  // shared card style
+  const card = {
+    background: '#fff',
+    border: '3px solid #1a1a2e',
+    borderRadius: 20,
+    boxShadow: '5px 5px 0 #1a1a2e',
+    padding: 20,
+  };
+
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: '#f5f0e8',
-      backgroundImage: `
-        repeating-linear-gradient(0deg, transparent, transparent 23px, #00000008 23px, #00000008 24px),
-        repeating-linear-gradient(90deg, transparent, transparent 23px, #00000008 23px, #00000008 24px)
-      `,
-      display: 'flex', justifyContent: 'center',
-      padding: '24px 16px 80px',
-    }}>
+    <div style={{ minHeight: '100vh', background: '#f5f0e6', display: 'flex', justifyContent: 'center', padding: '20px 16px 80px' }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Noto+Sans+TC:wght@400;500;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700;800&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'M PLUS Rounded 1c', 'Noto Sans TC', sans-serif; background: #f5f0e6; }
+
         @keyframes floatDmg {
           0%   { opacity: 1; transform: translateY(0) scale(1.1); }
           60%  { opacity: 1; transform: translateY(-40px) scale(1.2); }
@@ -234,81 +244,91 @@ export default function App() {
           80%     { transform: translateX(3px); }
         }
         @keyframes slideDown {
-          from { opacity: 0; transform: translateY(-8px); }
+          from { opacity: 0; transform: translateY(-10px); }
           to   { opacity: 1; transform: translateY(0); }
         }
-        .px-btn {
-          font-family: 'Press Start 2P', monospace;
-          cursor: pointer; border: 2px solid;
-          background: transparent; letter-spacing: 1px;
-          image-rendering: pixelated;
+
+        .rnd-btn {
+          font-family: 'M PLUS Rounded 1c', sans-serif;
+          cursor: pointer;
+          border-radius: 12px;
+          border: 2.5px solid #1a1a2e;
+          background: transparent;
+          font-weight: 700;
+          transition: transform 0.08s, box-shadow 0.08s;
         }
-        .px-btn:active { transform: translate(2px, 2px); }
-        .px-input {
-          font-family: 'Noto Sans TC', sans-serif;
-          font-size: 14px; background: #fff; color: #1f2937;
-          border: 2px solid #d1d5db; padding: 10px 12px; width: 100%; outline: none;
+        .rnd-btn:active { transform: translate(2px, 2px) !important; box-shadow: 1px 1px 0 #1a1a2e !important; }
+
+        .rnd-input {
+          font-family: 'M PLUS Rounded 1c', sans-serif;
+          font-size: 15px; font-weight: 500;
+          background: #faf8f4; color: #1a1a2e;
+          border: 2.5px solid #e2d9cc; border-radius: 12px;
+          padding: 11px 14px; width: 100%; outline: none;
+          transition: border-color 0.15s;
         }
-        .px-input:focus { border-color: #22c55e; }
-        .record-row .del-btn { opacity: 0; transition: opacity 0.15s; }
-        .record-row:hover .del-btn { opacity: 1; }
+        .rnd-input:focus { border-color: #1a1a2e; background: #fff; }
+
+        .record-row .action-btn { opacity: 0; transition: opacity 0.15s; }
+        .record-row:hover .action-btn { opacity: 1; }
+        @media (pointer: coarse) {
+          .record-row .action-btn { opacity: 1; }
+        }
       `}</style>
 
-      <div style={{ width: '100%', maxWidth: 400, display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div style={{ width: '100%', maxWidth: 420, display: 'flex', flexDirection: 'column', gap: 14 }}>
 
-        {/* Sign out */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-          <button className="px-btn" onClick={signOut}
-            style={{ padding: '6px 10px', fontSize: 7, color: '#9ca3af', borderColor: '#d1d5db', boxShadow: 'none' }}>
-            SIGN OUT
+        {/* Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 4 }}>
+          <div style={{ fontSize: 20, fontWeight: 800, color: '#1a1a2e' }}>🍽️ 餐費追蹤</div>
+          <button className="rnd-btn" onClick={signOut}
+            style={{ padding: '6px 12px', fontSize: 12, color: '#999', borderColor: '#ddd', boxShadow: 'none' }}>
+            登出
           </button>
         </div>
 
-        {/* HP Card */}
+        {/* Budget Card */}
         <div style={{
-          background: '#fff', border: '3px solid #1f2937',
-          boxShadow: '4px 4px 0 #1f2937', padding: 20,
+          ...card,
           position: 'relative',
           animation: shake ? 'shake 0.4s ease' : 'none',
         }}>
           {damageText && (
             <div style={{
-              position: 'absolute', top: 10, right: 20,
-              fontFamily: "'Press Start 2P'", fontSize: 18, color: '#ef4444',
-              textShadow: '2px 2px 0 #fca5a5',
+              position: 'absolute', top: 12, right: 20,
+              fontSize: 22, fontWeight: 800, color: '#ef4444',
               animation: 'floatDmg 1.2s ease forwards',
               pointerEvents: 'none', zIndex: 10,
             }}>{damageText}</div>
           )}
-          <HpBar remaining={remaining} totalBudget={totalBudget} />
+          <BudgetBar remaining={remaining} totalBudget={totalBudget} />
         </div>
 
         {/* Error */}
         {dataError && (
           <div style={{
-            fontFamily: "'Noto Sans TC'", fontSize: 12, color: '#ef4444',
-            background: '#fef2f2', border: '2px solid #fca5a5', padding: '8px 14px',
+            fontSize: 13, color: '#ef4444', background: '#fef2f2',
+            border: '2px solid #fca5a5', borderRadius: 12,
+            padding: '10px 14px',
           }}>{dataError}</div>
         )}
 
-        {/* Add Button / Form */}
+        {/* Add Button */}
         {!showAdd ? (
-          <button className="px-btn" onClick={() => setShowAdd(true)}
+          <button className="rnd-btn" onClick={() => setShowAdd(true)}
             style={{
-              width: '100%', padding: '14px', fontSize: 10,
-              color: '#1f2937', borderColor: '#1f2937',
-              background: '#facc15', boxShadow: '4px 4px 0 #1f2937', letterSpacing: 2,
+              width: '100%', padding: '15px', fontSize: 15,
+              color: '#1a1a2e', borderColor: '#1a1a2e',
+              background: '#fbbf24', boxShadow: '4px 4px 0 #1a1a2e',
             }}>
-            ⚔ ADD RECORD
+            ＋ 新增消費
           </button>
         ) : (
-          <div style={{
-            background: '#fff', border: '3px solid #1f2937',
-            boxShadow: '4px 4px 0 #1f2937', padding: 18,
-            display: 'flex', flexDirection: 'column', gap: 14,
-            animation: 'slideDown 0.15s ease',
-          }}>
-            <input className="px-input" placeholder="品項名稱"
+          /* Add Form */
+          <div style={{ ...card, display: 'flex', flexDirection: 'column', gap: 12, animation: 'slideDown 0.15s ease' }}>
+            <div style={{ fontSize: 14, fontWeight: 800, color: '#1a1a2e' }}>新增消費紀錄</div>
+
+            <input className="rnd-input" placeholder="品項名稱（例：雞腿飯）"
               value={form.item}
               onChange={(e) => setForm((f) => ({ ...f, item: e.target.value }))}
             />
@@ -317,14 +337,14 @@ export default function App() {
               {categoryList.map((cat) => {
                 const active = form.category === cat;
                 return (
-                  <button key={cat} className="px-btn"
+                  <button key={cat} className="rnd-btn"
                     onClick={() => setForm((f) => ({ ...f, category: cat }))}
                     style={{
-                      padding: '7px 10px', fontSize: 9,
-                      color: active ? '#fff' : '#6b7280',
-                      borderColor: active ? '#1f2937' : '#d1d5db',
-                      background: active ? '#1f2937' : 'transparent',
-                      boxShadow: active ? '2px 2px 0 #6b7280' : 'none',
+                      padding: '7px 12px', fontSize: 13,
+                      color: active ? '#fff' : '#666',
+                      borderColor: active ? '#1a1a2e' : '#ddd',
+                      background: active ? '#1a1a2e' : 'transparent',
+                      boxShadow: active ? '2px 2px 0 #666' : 'none',
                     }}>
                     {CATEGORY_ICON[cat] || ''} {cat}
                   </button>
@@ -333,158 +353,152 @@ export default function App() {
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              <input className="px-input" type="number" placeholder="金額"
+              <input className="rnd-input" type="number" placeholder="金額"
                 value={form.amount}
                 onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
               />
-              <input className="px-input" type="date" value={form.date}
+              <input className="rnd-input" type="date" value={form.date}
                 onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
               />
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              <button className="px-btn" onClick={() => setShowAdd(false)}
-                style={{ padding: '11px', fontSize: 9, color: '#6b7280', borderColor: '#d1d5db', boxShadow: '2px 2px 0 #d1d5db' }}>
-                CANCEL
+              <button className="rnd-btn" onClick={() => setShowAdd(false)}
+                style={{ padding: '12px', fontSize: 13, color: '#888', borderColor: '#ddd', boxShadow: '3px 3px 0 #ddd' }}>
+                取消
               </button>
-              <button className="px-btn" onClick={handleAdd}
-                style={{ padding: '11px', fontSize: 9, color: '#fff', borderColor: '#1f2937', background: '#22c55e', boxShadow: '3px 3px 0 #1f2937' }}>
-                CONFIRM
+              <button className="rnd-btn" onClick={handleAdd}
+                style={{ padding: '12px', fontSize: 13, color: '#fff', borderColor: '#1a1a2e', background: '#4ade80', boxShadow: '3px 3px 0 #1a1a2e' }}>
+                確認
               </button>
             </div>
           </div>
         )}
 
         {/* Record List */}
-        <div style={{ background: '#fff', border: '3px solid #1f2937', boxShadow: '4px 4px 0 #1f2937' }}>
-          {/* List header with single toggle */}
-          <button className="px-btn" onClick={() => setListCollapsed((v) => !v)}
+        <div style={{ ...card, padding: 0, overflow: 'hidden' }}>
+          <button className="rnd-btn" onClick={() => setListCollapsed((v) => !v)}
             style={{
               width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              padding: '12px 16px', borderColor: 'transparent', background: '#f9fafb', boxShadow: 'none',
-              borderBottom: listCollapsed ? 'none' : '2px solid #1f2937',
+              padding: '14px 18px', borderColor: 'transparent', background: '#faf8f4',
+              boxShadow: 'none', borderRadius: 0,
+              borderBottom: listCollapsed ? 'none' : '2px solid #ede8de',
             }}>
-            <span style={{ fontFamily: "'Press Start 2P'", fontSize: 8, color: '#1f2937', letterSpacing: 1 }}>
-              📜 BATTLE LOG
-            </span>
-            <span style={{ fontFamily: "'Press Start 2P'", fontSize: 7, color: '#9ca3af' }}>
-              {listCollapsed ? '▼ SHOW' : '▲ HIDE'}
+            <span style={{ fontSize: 14, fontWeight: 800, color: '#1a1a2e' }}>📋 消費紀錄</span>
+            <span style={{ fontSize: 12, color: '#aaa', fontWeight: 600 }}>
+              {listCollapsed ? '▼ 展開' : '▲ 收合'}
             </span>
           </button>
 
           {!listCollapsed && (
             <>
               {grouped.length === 0 && (
-                <div style={{ textAlign: 'center', padding: '32px 0', fontSize: 8, color: '#d1d5db', fontFamily: "'Press Start 2P'" }}>
-                  NO RECORDS YET
+                <div style={{ textAlign: 'center', padding: '36px 0', fontSize: 14, color: '#ccc', fontWeight: 700 }}>
+                  還沒有紀錄
                 </div>
               )}
 
               {grouped.map(([date, dayRecords], gi) => {
-            const dayTotal = dayRecords.reduce((s, r) => s + Number(r.amount), 0);
-            const isToday = date === todayStr();
+                const dayTotal = dayRecords.reduce((s, r) => s + Number(r.amount), 0);
+                const isToday = date === todayStr();
 
-            return (
-              <div key={date} style={{ borderTop: gi === 0 ? 'none' : '2px solid #1f2937' }}>
-                {/* Date header */}
-                <div style={{
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                  padding: '12px 16px',
-                  background: isToday ? '#f0fdf4' : 'transparent',
-                }}>
-                  <span style={{ fontFamily: "'Noto Sans TC'", fontSize: 13, fontWeight: 700, color: isToday ? '#22c55e' : '#6b7280' }}>
-                    {isToday && '▶ '}{formatDate(date)}
-                  </span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span style={{ fontFamily: "'Press Start 2P'", fontSize: 8, color: '#ef4444' }}>-¥{dayTotal}</span>
-                  </div>
-                </div>
-
-                {dayRecords.map((r, ri) => (
-                  editingId === r.id ? (
-                    /* ── Edit form inline ── */
-                    <div key={r.id} style={{
-                      padding: '12px 16px', borderTop: '1px solid #f3f4f6',
-                      background: '#fffbeb', display: 'flex', flexDirection: 'column', gap: 10,
+                return (
+                  <div key={date} style={{ borderTop: gi === 0 ? 'none' : '2px solid #ede8de' }}>
+                    {/* Date header */}
+                    <div style={{
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                      padding: '10px 18px',
+                      background: isToday ? '#fef9ee' : '#faf8f4',
                     }}>
-                      <input className="px-input" placeholder="品項名稱"
-                        value={editForm.item}
-                        onChange={(e) => setEditForm((f) => ({ ...f, item: e.target.value }))}
-                      />
-                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                        {categoryList.map((cat) => {
-                          const active = editForm.category === cat;
-                          return (
-                            <button key={cat} className="px-btn"
-                              onClick={() => setEditForm((f) => ({ ...f, category: cat }))}
-                              style={{
-                                padding: '6px 9px', fontSize: 9,
-                                color: active ? '#fff' : '#6b7280',
-                                borderColor: active ? '#1f2937' : '#d1d5db',
-                                background: active ? '#1f2937' : 'transparent',
-                                boxShadow: active ? '2px 2px 0 #6b7280' : 'none',
-                              }}>
-                              {CATEGORY_ICON[cat] || ''} {cat}
-                            </button>
-                          );
-                        })}
-                      </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                        <input className="px-input" type="number" placeholder="金額"
-                          value={editForm.amount}
-                          onChange={(e) => setEditForm((f) => ({ ...f, amount: e.target.value }))}
-                        />
-                        <input className="px-input" type="date" value={editForm.date}
-                          onChange={(e) => setEditForm((f) => ({ ...f, date: e.target.value }))}
-                        />
-                      </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                        <button className="px-btn" onClick={() => setEditingId(null)}
-                          style={{ padding: '9px', fontSize: 9, color: '#6b7280', borderColor: '#d1d5db', boxShadow: '2px 2px 0 #d1d5db' }}>
-                          CANCEL
-                        </button>
-                        <button className="px-btn" onClick={handleEditSave}
-                          style={{ padding: '9px', fontSize: 9, color: '#fff', borderColor: '#1f2937', background: '#22c55e', boxShadow: '3px 3px 0 #1f2937' }}>
-                          SAVE
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    /* ── Normal row ── */
-                    <div key={r.id} className="record-row"
-                      style={{
-                        display: 'flex', alignItems: 'center',
-                        padding: '10px 16px',
-                        background: ri % 2 === 0 ? '#fafafa' : '#fff',
-                        borderTop: '1px solid #f3f4f6', gap: 10,
-                      }}>
-                      <span style={{ fontSize: 16, flexShrink: 0 }}>{CATEGORY_ICON[r.category] || '🍽'}</span>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{
-                          fontFamily: "'Noto Sans TC'", fontSize: 14, fontWeight: 500, color: '#1f2937',
-                          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                        }}>{r.item}</div>
-                        <div style={{ fontFamily: "'Noto Sans TC'", fontSize: 11, color: '#9ca3af', marginTop: 2 }}>
-                          {r.category}
-                        </div>
-                      </div>
-                      <span style={{ fontFamily: "'Press Start 2P'", fontSize: 11, color: '#ef4444', flexShrink: 0 }}>
-                        -{r.amount}
+                      <span style={{ fontSize: 13, fontWeight: 800, color: isToday ? '#f59e0b' : '#888' }}>
+                        {isToday && '▶ '}{formatDate(date)}
                       </span>
-                      <button className="px-btn del-btn" onClick={() => handleEdit(r)}
-                        style={{ padding: '4px 7px', fontSize: 10, color: '#6b7280', borderColor: '#d1d5db', boxShadow: 'none', lineHeight: 1, flexShrink: 0 }}>
-                        ✎
-                      </button>
-                      <button className="px-btn del-btn" onClick={() => deleteRecord(r.id)}
-                        style={{ padding: '4px 7px', fontSize: 10, color: '#ef4444', borderColor: '#fca5a5', boxShadow: 'none', lineHeight: 1, flexShrink: 0 }}>
-                        ×
-                      </button>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: '#ef4444' }}>-¥{dayTotal}</span>
                     </div>
-                  )
-                ))}
-              </div>
-            );
-          })}
+
+                    {dayRecords.map((r, ri) => (
+                      editingId === r.id ? (
+                        /* Edit form */
+                        <div key={r.id} style={{
+                          padding: '14px 18px', borderTop: '1px solid #f0ebe0',
+                          background: '#fffbee', display: 'flex', flexDirection: 'column', gap: 10,
+                        }}>
+                          <input className="rnd-input" placeholder="品項名稱"
+                            value={editForm.item}
+                            onChange={(e) => setEditForm((f) => ({ ...f, item: e.target.value }))}
+                          />
+                          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                            {categoryList.map((cat) => {
+                              const active = editForm.category === cat;
+                              return (
+                                <button key={cat} className="rnd-btn"
+                                  onClick={() => setEditForm((f) => ({ ...f, category: cat }))}
+                                  style={{
+                                    padding: '6px 10px', fontSize: 12,
+                                    color: active ? '#fff' : '#666',
+                                    borderColor: active ? '#1a1a2e' : '#ddd',
+                                    background: active ? '#1a1a2e' : 'transparent',
+                                    boxShadow: active ? '2px 2px 0 #666' : 'none',
+                                  }}>
+                                  {CATEGORY_ICON[cat] || ''} {cat}
+                                </button>
+                              );
+                            })}
+                          </div>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                            <input className="rnd-input" type="number" placeholder="金額"
+                              value={editForm.amount}
+                              onChange={(e) => setEditForm((f) => ({ ...f, amount: e.target.value }))}
+                            />
+                            <input className="rnd-input" type="date" value={editForm.date}
+                              onChange={(e) => setEditForm((f) => ({ ...f, date: e.target.value }))}
+                            />
+                          </div>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                            <button className="rnd-btn" onClick={() => setEditingId(null)}
+                              style={{ padding: '10px', fontSize: 13, color: '#888', borderColor: '#ddd', boxShadow: '2px 2px 0 #ddd' }}>
+                              取消
+                            </button>
+                            <button className="rnd-btn" onClick={handleEditSave}
+                              style={{ padding: '10px', fontSize: 13, color: '#fff', borderColor: '#1a1a2e', background: '#4ade80', boxShadow: '3px 3px 0 #1a1a2e' }}>
+                              儲存
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        /* Normal row */
+                        <div key={r.id} className="record-row"
+                          style={{
+                            display: 'flex', alignItems: 'center',
+                            padding: '11px 18px',
+                            background: ri % 2 === 0 ? '#fff' : '#fdf9f4',
+                            borderTop: '1px solid #f0ebe0', gap: 12,
+                          }}>
+                          <span style={{ fontSize: 20, flexShrink: 0 }}>{CATEGORY_ICON[r.category] || '🍽'}</span>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{
+                              fontSize: 15, fontWeight: 700, color: '#1a1a2e',
+                              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                            }}>{r.item}</div>
+                            <div style={{ fontSize: 11, color: '#bbb', marginTop: 2, fontWeight: 500 }}>{r.category}</div>
+                          </div>
+                          <span style={{ fontSize: 15, fontWeight: 800, color: '#ef4444', flexShrink: 0 }}>
+                            -¥{r.amount}
+                          </span>
+                          <button className="rnd-btn action-btn" onClick={() => handleEdit(r)}
+                            style={{ padding: '5px 9px', fontSize: 13, color: '#888', borderColor: '#ddd', boxShadow: 'none', flexShrink: 0 }}>
+                            ✎
+                          </button>
+                          <button className="rnd-btn action-btn" onClick={() => deleteRecord(r.id)}
+                            style={{ padding: '5px 9px', fontSize: 13, color: '#ef4444', borderColor: '#fca5a5', boxShadow: 'none', flexShrink: 0 }}>
+                            ×
+                          </button>
+                        </div>
+                      )
+                    ))}
+                  </div>
+                );
+              })}
             </>
           )}
         </div>

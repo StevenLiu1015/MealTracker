@@ -6,10 +6,9 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang TC',
-    'Noto Sans TC', sans-serif;
-  background: #12121f;
-  color: #eee;
+  font-family: 'M PLUS Rounded 1c', 'Noto Sans TC', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #f5f0e6;
+  color: #1a1a2e;
   -webkit-font-smoothing: antialiased;
 }
 
