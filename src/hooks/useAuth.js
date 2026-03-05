@@ -30,8 +30,12 @@ export function useAuth() {
           client_id: GOOGLE_CONFIG.CLIENT_ID,
           scope: GOOGLE_CONFIG.SCOPES,
           callback: (response) => {
+            // callback 有回來，清掉 timeout
+            if (client._autoSignInTimeout) {
+              clearTimeout(client._autoSignInTimeout);
+              client._autoSignInTimeout = null;
+            }
             if (response.error) {
-              // 靜默登入失敗（token 過期或被撤銷），清除記錄，等使用者手動登入
               if (response.error === 'interaction_required' ||
                   response.error === 'access_denied') {
                 localStorage.removeItem(AUTO_SIGNIN_KEY);
@@ -40,7 +44,7 @@ export function useAuth() {
               setIsSignedIn(false);
               setIsLoading(false);
             } else {
-              localStorage.setItem(AUTO_SIGNIN_KEY, '1'); // 記住已授權
+              localStorage.setItem(AUTO_SIGNIN_KEY, '1');
               setIsSignedIn(true);
               setError(null);
               setIsLoading(false);
@@ -53,8 +57,15 @@ export function useAuth() {
         // 嘗試自動登入（曾授權過 → 靜默取得 token，不彈視窗）
         const hasAutoSignIn = localStorage.getItem(AUTO_SIGNIN_KEY);
         if (hasAutoSignIn) {
+          // 設定 3 秒 timeout：若 Google callback 沒回來，自動 fallback 到手動登入
+          const timeout = setTimeout(() => {
+            localStorage.removeItem(AUTO_SIGNIN_KEY);
+            setIsLoading(false);
+          }, 3000);
+
+          // 將 timeout 暫存，callback 成功時清掉
+          client._autoSignInTimeout = timeout;
           client.requestAccessToken({ prompt: '' });
-          // isLoading 維持 true，等 callback 回來再設定
         } else {
           setIsLoading(false);
         }
