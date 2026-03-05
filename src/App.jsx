@@ -153,7 +153,7 @@ export default function App() {
   const [form, setForm] = useState({ item: '', category: '午餐', amount: '', date: todayStr() });
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({});
-  const [collapsedDates, setCollapsedDates] = useState({});
+  const [listCollapsed, setListCollapsed] = useState(false);
   const [shake, setShake] = useState(false);
   const [damageText, setDamageText] = useState(null);
 
@@ -198,10 +198,6 @@ export default function App() {
       amount: Number(editForm.amount),
     });
     setEditingId(null);
-  }
-
-  function toggleDate(date) {
-    setCollapsedDates((prev) => ({ ...prev, [date]: !prev[date] }));
   }
 
   // ── Screens ──
@@ -361,37 +357,50 @@ export default function App() {
 
         {/* Record List */}
         <div style={{ background: '#fff', border: '3px solid #1f2937', boxShadow: '4px 4px 0 #1f2937' }}>
-          {grouped.length === 0 && (
-            <div style={{ textAlign: 'center', padding: '32px 0', fontSize: 8, color: '#d1d5db', fontFamily: "'Press Start 2P'" }}>
-              NO RECORDS YET
-            </div>
-          )}
+          {/* List header with single toggle */}
+          <button className="px-btn" onClick={() => setListCollapsed((v) => !v)}
+            style={{
+              width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              padding: '12px 16px', borderColor: 'transparent', background: '#f9fafb', boxShadow: 'none',
+              borderBottom: listCollapsed ? 'none' : '2px solid #1f2937',
+            }}>
+            <span style={{ fontFamily: "'Press Start 2P'", fontSize: 8, color: '#1f2937', letterSpacing: 1 }}>
+              📜 BATTLE LOG
+            </span>
+            <span style={{ fontFamily: "'Press Start 2P'", fontSize: 7, color: '#9ca3af' }}>
+              {listCollapsed ? '▼ SHOW' : '▲ HIDE'}
+            </span>
+          </button>
 
-          {grouped.map(([date, dayRecords], gi) => {
+          {!listCollapsed && (
+            <>
+              {grouped.length === 0 && (
+                <div style={{ textAlign: 'center', padding: '32px 0', fontSize: 8, color: '#d1d5db', fontFamily: "'Press Start 2P'" }}>
+                  NO RECORDS YET
+                </div>
+              )}
+
+              {grouped.map(([date, dayRecords], gi) => {
             const dayTotal = dayRecords.reduce((s, r) => s + Number(r.amount), 0);
             const isToday = date === todayStr();
-            const isCollapsed = collapsedDates[date];
 
             return (
               <div key={date} style={{ borderTop: gi === 0 ? 'none' : '2px solid #1f2937' }}>
-                <button className="px-btn" onClick={() => toggleDate(date)}
-                  style={{
-                    width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                    padding: '12px 16px', fontSize: 0,
-                    borderColor: 'transparent',
-                    background: isToday ? '#f0fdf4' : 'transparent',
-                    boxShadow: 'none',
-                  }}>
+                {/* Date header */}
+                <div style={{
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  padding: '12px 16px',
+                  background: isToday ? '#f0fdf4' : 'transparent',
+                }}>
                   <span style={{ fontFamily: "'Noto Sans TC'", fontSize: 13, fontWeight: 700, color: isToday ? '#22c55e' : '#6b7280' }}>
                     {isToday && '▶ '}{formatDate(date)}
                   </span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <span style={{ fontFamily: "'Press Start 2P'", fontSize: 8, color: '#ef4444' }}>-¥{dayTotal}</span>
-                    <span style={{ fontFamily: "'Press Start 2P'", fontSize: 7, color: '#d1d5db' }}>{isCollapsed ? '▼' : '▲'}</span>
                   </div>
-                </button>
+                </div>
 
-                {!isCollapsed && dayRecords.map((r, ri) => (
+                {dayRecords.map((r, ri) => (
                   editingId === r.id ? (
                     /* ── Edit form inline ── */
                     <div key={r.id} style={{
@@ -476,6 +485,8 @@ export default function App() {
               </div>
             );
           })}
+            </>
+          )}
         </div>
       </div>
     </div>
