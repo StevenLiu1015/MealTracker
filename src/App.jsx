@@ -39,8 +39,8 @@ function todayStr() {
 // ── HP Bar ────────────────────────────────────────────────────────
 function HpBar({ remaining, totalBudget }) {
   const pct = Math.max(0, Math.min(100, (remaining / totalBudget) * 100));
-  const isLow = pct < 25;
-  const isMid = pct >= 25 && pct < 50;
+  const isLow = pct < 10;
+  const isMid = pct >= 10 && pct < 20;
   const barColor = isLow ? '#ef4444' : isMid ? '#f59e0b' : '#22c55e';
   const trackColor = isLow ? '#fef2f2' : isMid ? '#fffbeb' : '#f0fdf4';
   const [blink, setBlink] = useState(false);
@@ -57,7 +57,7 @@ function HpBar({ remaining, totalBudget }) {
         <span style={{
           fontFamily: "'Press Start 2P'", fontSize: 22, color: barColor, letterSpacing: -1,
         }}>
-          ¥{remaining >= 0 ? remaining : 0}
+          {remaining >= 0 ? `¥${remaining}` : `-¥${Math.abs(remaining)}`}
         </span>
         <span style={{ fontFamily: "'Press Start 2P'", fontSize: 9, color: '#9ca3af' }}>
           / {totalBudget}
