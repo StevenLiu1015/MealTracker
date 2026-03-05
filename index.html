@@ -7,12 +7,12 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <link rel="manifest" href="/meal-tracker/manifest.json" />
+    <link rel="manifest" href="/MealTracker/manifest.json" />
     <title>餐費追蹤器</title>
 
-    <!-- Google API -->
-    <script src="https://apis.google.com/js/api.js" async defer></script>
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <!-- Google API：移除 defer，確保手機上載入順序正確 -->
+    <script src="https://apis.google.com/js/api.js" async></script>
+    <script src="https://accounts.google.com/gsi/client" async></script>
   </head>
   <body>
     <div id="root"></div>
