@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { GOOGLE_CONFIG } from '../config';
 
+const AUTO_SIGNIN_KEY = 'mealtracker_autosignin';
+
 /**
  * 管理 Google OAuth2 登入狀態
  * 使用 Google Identity Services (GIS) + gapi
@@ -29,24 +31,36 @@ export function useAuth() {
           scope: GOOGLE_CONFIG.SCOPES,
           callback: (response) => {
             if (response.error) {
+              // 靜默登入失敗（token 過期或被撤銷），清除記錄，等使用者手動登入
+              if (response.error === 'interaction_required' ||
+                  response.error === 'access_denied') {
+                localStorage.removeItem(AUTO_SIGNIN_KEY);
+              }
               setError(response.error);
               setIsSignedIn(false);
+              setIsLoading(false);
             } else {
+              localStorage.setItem(AUTO_SIGNIN_KEY, '1'); // 記住已授權
               setIsSignedIn(true);
               setError(null);
+              setIsLoading(false);
             }
           },
         });
 
         setTokenClient(client);
 
-        // 檢查是否已有有效的 token（頁面重整後）
-        const token = window.gapi.client.getToken();
-        if (token) setIsSignedIn(true);
+        // 嘗試自動登入（曾授權過 → 靜默取得 token，不彈視窗）
+        const hasAutoSignIn = localStorage.getItem(AUTO_SIGNIN_KEY);
+        if (hasAutoSignIn) {
+          client.requestAccessToken({ prompt: '' });
+          // isLoading 維持 true，等 callback 回來再設定
+        } else {
+          setIsLoading(false);
+        }
 
       } catch (err) {
         setError('Google API 初始化失敗：' + err.message);
-      } finally {
         setIsLoading(false);
       }
     };
@@ -64,7 +78,11 @@ export function useAuth() {
 
   const signIn = useCallback(() => {
     if (tokenClient) {
-      tokenClient.requestAccessToken({ prompt: 'consent' });
+      // 手動登入：第一次用 consent，之後用 select_account 讓使用者選帳號
+      const hasAutoSignIn = localStorage.getItem(AUTO_SIGNIN_KEY);
+      tokenClient.requestAccessToken({
+        prompt: hasAutoSignIn ? 'select_account' : 'consent',
+      });
     }
   }, [tokenClient]);
 
@@ -74,6 +92,7 @@ export function useAuth() {
       window.google.accounts.oauth2.revoke(token.access_token);
       window.gapi.client.setToken(null);
     }
+    localStorage.removeItem(AUTO_SIGNIN_KEY); // 登出時清除自動登入記錄
     setIsSignedIn(false);
   }, []);
 

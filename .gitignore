@@ -1,0 +1,21 @@
+# Node.js 免安裝版（本機用，不推上去）
+node/
+
+# 依賴套件（npm install 會自動產生）
+node_modules/
+
+# Vite 打包輸出（GitHub Actions 會自己 build）
+dist/
+
+# 本地環境設定
+.env
+.env.local
+.env.*.local
+
+# 編輯器設定
+.vscode/
+.idea/
+
+# 系統檔案
+.DS_Store
+Thumbs.db
