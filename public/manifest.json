@@ -1,11 +1,11 @@
 {
-  "name": "餐費追蹤器",
-  "short_name": "餐費",
+  "name": "MealTracker",
+  "short_name": "MealTracker",
   "description": "每日餐費預算追蹤工具",
   "start_url": "/MealTracker/",
   "display": "standalone",
-  "background_color": "#1a1a2e",
-  "theme_color": "#e94560",
+  "background_color": "#f5f0e6",
+  "theme_color": "#f5f0e6",
   "orientation": "portrait",
   "icons": [
     {

@@ -54,7 +54,7 @@ function BudgetBar({ remaining, totalBudget }) {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 12 }}>
         <div>
-          <div style={{ fontSize: 12, color: '#888', marginBottom: 2, fontWeight: 600 }}>本月剩餘預算</div>
+          <div style={{ fontSize: 12, color: '#888', marginBottom: 2, fontWeight: 600 }}>Monthly Budget</div>
           <div style={{ fontSize: 36, fontWeight: 800, color: isLow ? '#ef4444' : '#1a1a2e', lineHeight: 1 }}>
             {remaining >= 0 ? `¥${remaining}` : `-¥${Math.abs(remaining)}`}
           </div>
@@ -81,7 +81,7 @@ function BudgetBar({ remaining, totalBudget }) {
           opacity: blink ? 1 : 0.3, transition: 'opacity 0.2s',
           letterSpacing: 1,
         }}>
-          ⚠️ 預算快用完了！
+          ⚠️ Low budget warning!
         </p>
       )}
     </div>
@@ -89,7 +89,7 @@ function BudgetBar({ remaining, totalBudget }) {
 }
 
 // ── Loading ───────────────────────────────────────────────────────
-function LoadingScreen({ text = '載入中...' }) {
+function LoadingScreen({ text = 'Loading...' }) {
   return (
     <div style={{
       minHeight: '100vh', background: '#f5f0e6',
@@ -118,7 +118,7 @@ function LoginScreen({ onSignIn, error }) {
       }}>
         <div style={{ fontSize: 52 }}>🍜</div>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 22, fontWeight: 800, color: '#1a1a2e' }}>餐費追蹤器</div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: '#1a1a2e' }}>MealTracker</div>
           <div style={{ fontSize: 13, color: '#aaa', marginTop: 4 }}>資料儲存於你的 Google Sheets</div>
         </div>
         {error && (
@@ -143,7 +143,7 @@ function LoginScreen({ onSignIn, error }) {
           onTouchStart={e => { e.currentTarget.style.transform = 'translate(2px,2px)'; e.currentTarget.style.boxShadow = '2px 2px 0 #1a1a2e'; }}
           onTouchEnd={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '4px 4px 0 #1a1a2e'; }}
         >
-          Google 登入
+          Sign in with Google
         </button>
       </div>
     </div>
@@ -209,13 +209,17 @@ export default function App() {
     setEditingId(null);
   }
 
-  if (authLoading) return <LoadingScreen text="載入中..." />;
+  async function handleDelete(id) {
+    setEditingId(null);
+    await deleteRecord(id);
+  }
+
+  if (authLoading) return <LoadingScreen text="Loading..." />;
   if (!isSignedIn) return <LoginScreen onSignIn={signIn} error={authError} />;
-  if (isLoadingData) return <LoadingScreen text="同步資料中..." />;
+  if (isLoadingData) return <LoadingScreen text="Syncing..." />;
 
   const categoryList = CATEGORIES || ['早餐', '午餐', '晚餐', '飲料', '零食'];
 
-  // shared card style
   const card = {
     background: '#fff',
     border: '3px solid #1a1a2e',
@@ -269,21 +273,22 @@ export default function App() {
         }
         .rnd-input:focus { border-color: #1a1a2e; background: #fff; }
 
-        .record-row .action-btn { opacity: 0; transition: opacity 0.15s; }
-        .record-row:hover .action-btn { opacity: 1; }
-        @media (pointer: coarse) {
-          .record-row .action-btn { opacity: 1; }
+        .record-row {
+          cursor: pointer;
+          transition: background 0.12s;
         }
+        .record-row:hover { background: #fef9ee !important; }
+        .record-row:active { background: #fef3c7 !important; }
       `}</style>
 
       <div style={{ width: '100%', maxWidth: 420, display: 'flex', flexDirection: 'column', gap: 14 }}>
 
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 4 }}>
-          <div style={{ fontSize: 20, fontWeight: 800, color: '#1a1a2e' }}>🍽️ 餐費追蹤</div>
+          <div style={{ fontSize: 20, fontWeight: 800, color: '#1a1a2e' }}>MealTracker</div>
           <button className="rnd-btn" onClick={signOut}
             style={{ padding: '6px 12px', fontSize: 12, color: '#999', borderColor: '#ddd', boxShadow: 'none' }}>
-            登出
+            Sign Out
           </button>
         </div>
 
@@ -321,14 +326,14 @@ export default function App() {
               color: '#1a1a2e', borderColor: '#1a1a2e',
               background: '#fbbf24', boxShadow: '4px 4px 0 #1a1a2e',
             }}>
-            ＋ 新增消費
+            ＋ Add Record
           </button>
         ) : (
           /* Add Form */
           <div style={{ ...card, display: 'flex', flexDirection: 'column', gap: 12, animation: 'slideDown 0.15s ease' }}>
-            <div style={{ fontSize: 14, fontWeight: 800, color: '#1a1a2e' }}>新增消費紀錄</div>
+            <div style={{ fontSize: 14, fontWeight: 800, color: '#1a1a2e' }}>New Record</div>
 
-            <input className="rnd-input" placeholder="品項名稱（例：雞腿飯）"
+            <input className="rnd-input" placeholder="Item name"
               value={form.item}
               onChange={(e) => setForm((f) => ({ ...f, item: e.target.value }))}
             />
@@ -353,7 +358,7 @@ export default function App() {
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              <input className="rnd-input" type="number" placeholder="金額"
+              <input className="rnd-input" type="number" placeholder="Amount"
                 value={form.amount}
                 onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
               />
@@ -365,11 +370,11 @@ export default function App() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <button className="rnd-btn" onClick={() => setShowAdd(false)}
                 style={{ padding: '12px', fontSize: 13, color: '#888', borderColor: '#ddd', boxShadow: '3px 3px 0 #ddd' }}>
-                取消
+                Cancel
               </button>
               <button className="rnd-btn" onClick={handleAdd}
                 style={{ padding: '12px', fontSize: 13, color: '#fff', borderColor: '#1a1a2e', background: '#4ade80', boxShadow: '3px 3px 0 #1a1a2e' }}>
-                確認
+                Confirm
               </button>
             </div>
           </div>
@@ -384,9 +389,9 @@ export default function App() {
               boxShadow: 'none', borderRadius: 0,
               borderBottom: listCollapsed ? 'none' : '2px solid #ede8de',
             }}>
-            <span style={{ fontSize: 14, fontWeight: 800, color: '#1a1a2e' }}>📋 消費紀錄</span>
+            <span style={{ fontSize: 14, fontWeight: 800, color: '#1a1a2e' }}>📋 Records</span>
             <span style={{ fontSize: 12, color: '#aaa', fontWeight: 600 }}>
-              {listCollapsed ? '▼ 展開' : '▲ 收合'}
+              {listCollapsed ? '▼ Show' : '▲ Hide'}
             </span>
           </button>
 
@@ -394,7 +399,7 @@ export default function App() {
             <>
               {grouped.length === 0 && (
                 <div style={{ textAlign: 'center', padding: '36px 0', fontSize: 14, color: '#ccc', fontWeight: 700 }}>
-                  還沒有紀錄
+                  No records yet
                 </div>
               )}
 
@@ -413,17 +418,18 @@ export default function App() {
                       <span style={{ fontSize: 13, fontWeight: 800, color: isToday ? '#f59e0b' : '#888' }}>
                         {isToday && '▶ '}{formatDate(date)}
                       </span>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: '#ef4444' }}>-¥{dayTotal}</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: '#f59e0b' }}>-¥{dayTotal}</span>
                     </div>
 
                     {dayRecords.map((r, ri) => (
                       editingId === r.id ? (
-                        /* Edit form */
+                        /* ── Edit panel ── */
                         <div key={r.id} style={{
                           padding: '14px 18px', borderTop: '1px solid #f0ebe0',
                           background: '#fffbee', display: 'flex', flexDirection: 'column', gap: 10,
+                          animation: 'slideDown 0.15s ease',
                         }}>
-                          <input className="rnd-input" placeholder="品項名稱"
+                          <input className="rnd-input" placeholder="Item name"
                             value={editForm.item}
                             onChange={(e) => setEditForm((f) => ({ ...f, item: e.target.value }))}
                           />
@@ -446,7 +452,7 @@ export default function App() {
                             })}
                           </div>
                           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                            <input className="rnd-input" type="number" placeholder="金額"
+                            <input className="rnd-input" type="number" placeholder="Amount"
                               value={editForm.amount}
                               onChange={(e) => setEditForm((f) => ({ ...f, amount: e.target.value }))}
                             />
@@ -454,20 +460,29 @@ export default function App() {
                               onChange={(e) => setEditForm((f) => ({ ...f, date: e.target.value }))}
                             />
                           </div>
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                            <button className="rnd-btn" onClick={() => setEditingId(null)}
-                              style={{ padding: '10px', fontSize: 13, color: '#888', borderColor: '#ddd', boxShadow: '2px 2px 0 #ddd' }}>
-                              取消
+                          {/* trash icon left, Cancel + Save right */}
+                          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                            <button className="rnd-btn" onClick={() => handleDelete(r.id)}
+                              style={{ padding: '10px 13px', fontSize: 16, color: '#ef4444', borderColor: '#fca5a5', boxShadow: 'none', flexShrink: 0 }}
+                              title="Delete">
+                              🗑
                             </button>
-                            <button className="rnd-btn" onClick={handleEditSave}
-                              style={{ padding: '10px', fontSize: 13, color: '#fff', borderColor: '#1a1a2e', background: '#4ade80', boxShadow: '3px 3px 0 #1a1a2e' }}>
-                              儲存
-                            </button>
+                            <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                              <button className="rnd-btn" onClick={() => setEditingId(null)}
+                                style={{ padding: '10px', fontSize: 13, color: '#888', borderColor: '#ddd', boxShadow: '2px 2px 0 #ddd' }}>
+                                Cancel
+                              </button>
+                              <button className="rnd-btn" onClick={handleEditSave}
+                                style={{ padding: '10px', fontSize: 13, color: '#fff', borderColor: '#1a1a2e', background: '#4ade80', boxShadow: '3px 3px 0 #1a1a2e' }}>
+                                Save
+                              </button>
+                            </div>
                           </div>
                         </div>
                       ) : (
-                        /* Normal row */
+                        /* ── Normal row — tap to edit ── */
                         <div key={r.id} className="record-row"
+                          onClick={() => handleEdit(r)}
                           style={{
                             display: 'flex', alignItems: 'center',
                             padding: '11px 18px',
@@ -485,14 +500,6 @@ export default function App() {
                           <span style={{ fontSize: 15, fontWeight: 800, color: '#ef4444', flexShrink: 0 }}>
                             -¥{r.amount}
                           </span>
-                          <button className="rnd-btn action-btn" onClick={() => handleEdit(r)}
-                            style={{ padding: '5px 9px', fontSize: 13, color: '#888', borderColor: '#ddd', boxShadow: 'none', flexShrink: 0 }}>
-                            ✎
-                          </button>
-                          <button className="rnd-btn action-btn" onClick={() => deleteRecord(r.id)}
-                            style={{ padding: '5px 9px', fontSize: 13, color: '#ef4444', borderColor: '#fca5a5', boxShadow: 'none', flexShrink: 0 }}>
-                            ×
-                          </button>
                         </div>
                       )
                     ))}
