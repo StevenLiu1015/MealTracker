@@ -57,11 +57,11 @@ export function useAuth() {
         // 嘗試自動登入（曾授權過 → 靜默取得 token，不彈視窗）
         const hasAutoSignIn = localStorage.getItem(AUTO_SIGNIN_KEY);
         if (hasAutoSignIn) {
-          // 設定 3 秒 timeout：若 Google callback 沒回來，自動 fallback 到手動登入
+          // 設定 5 秒 timeout：若 Google callback 沒回來，fallback 到手動登入
+          // 注意：不清除 flag，下次開啟還是會嘗試自動登入
           const timeout = setTimeout(() => {
-            localStorage.removeItem(AUTO_SIGNIN_KEY);
             setIsLoading(false);
-          }, 3000);
+          }, 5000);
 
           // 將 timeout 暫存，callback 成功時清掉
           client._autoSignInTimeout = timeout;
