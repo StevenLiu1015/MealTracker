@@ -4,31 +4,18 @@ import { GOOGLE_CONFIG } from '../config';
 /**
  * 管理 Google OAuth2 登入狀態
  *
- * 自動登入架構（兩層）：
- *  1. google.accounts.id (One Tap) — 用瀏覽器 cookie 確認身分，可跨分頁存活
- *  2. oauth2.initTokenClient       — 取得 Sheets API 用的 Access Token
+ * 架構說明：
+ *  - 自動登入（page load）：id.prompt() → One Tap cookie 識別 → requestAccessToken
+ *  - 手動登入（按鈕）：requestAccessToken({ prompt: '' }) 靜默識別 Chrome 帳號
+ *                      → 若需互動 → requestAccessToken({ prompt: 'select_account' })
  *
- * 手動登入流程：
- *  按下登入 → prompt: '' 靜默用 Chrome 目前帳號取 token
- *           → 若失敗 → fallback 到 select_account 讓使用者選
+ * 兩條路完全分開，不互相干擾
  */
 export function useAuth() {
   const [isSignedIn, setIsSignedIn] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const tokenClientRef = useRef(null);
-
-  // 共用的 token response handler
-  const handleTokenResponse = useCallback((response) => {
-    if (response.error) {
-      setError(response.error);
-      setIsSignedIn(false);
-    } else {
-      setIsSignedIn(true);
-      setError(null);
-    }
-    setIsLoading(false);
-  }, []);
 
   useEffect(() => {
     const initGapi = async () => {
@@ -38,28 +25,45 @@ export function useAuth() {
           discoveryDocs: [GOOGLE_CONFIG.DISCOVERY_DOC],
         });
 
-        // ── Token client ──
+        // ── Token client：只負責取 access token ──
         const client = window.google.accounts.oauth2.initTokenClient({
           client_id: GOOGLE_CONFIG.CLIENT_ID,
           scope: GOOGLE_CONFIG.SCOPES,
-          callback: handleTokenResponse,
+          callback: '', // callback 在呼叫時動態設定
         });
         tokenClientRef.current = client;
 
-        // ── One Tap：自動登入（跨分頁，用 cookie）──
+        // ── One Tap：只用於 page load 自動登入 ──
         window.google.accounts.id.initialize({
           client_id: GOOGLE_CONFIG.CLIENT_ID,
           auto_select: true,
           cancel_on_tap_outside: false,
           callback: () => {
+            // One Tap 身分確認成功 → 靜默取 access token
+            client.callback = (response) => {
+              if (response.error) {
+                setIsSignedIn(false);
+                setError(response.error);
+              } else {
+                setIsSignedIn(true);
+                setError(null);
+              }
+              setIsLoading(false);
+            };
             client.requestAccessToken({ prompt: '' });
           },
         });
 
         window.google.accounts.id.prompt((notification) => {
-          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+          // 只要 One Tap 沒有自動完成（不論原因），就結束 loading 讓使用者手動登入
+          if (
+            notification.isNotDisplayed() ||
+            notification.isSkippedMoment() ||
+            notification.isDismissedMoment()
+          ) {
             setIsLoading(false);
           }
+          // isDisplayed：One Tap UI 顯示中，等使用者確認，不動 loading
         });
 
       } catch (err) {
@@ -76,27 +80,41 @@ export function useAuth() {
     }, 100);
 
     return () => clearInterval(checkReady);
-  }, [handleTokenResponse]);
+  }, []);
 
-  // 手動登入：優先靜默用 Chrome 目前帳號，失敗再跳選帳號視窗
+  // 手動登入：靜默識別 Chrome 目前帳號 → 失敗才跳選帳號視窗
   const signIn = useCallback(() => {
     const client = tokenClientRef.current;
     if (!client) return;
 
-    client.callback = (response) => {
+    const onToken = (response) => {
       if (response.error) {
-        // 靜默失敗 → 恢復正常 callback，再跳選帳號
-        client.callback = handleTokenResponse;
-        client.requestAccessToken({ prompt: 'select_account' });
+        if (response.error === 'interaction_required' || response.error === 'access_denied') {
+          // 靜默失敗 → 跳出選帳號視窗
+          client.callback = (r) => {
+            setIsSignedIn(!r.error);
+            if (!r.error) setError(null);
+            else setError(r.error);
+            setIsLoading(false);
+          };
+          client.requestAccessToken({ prompt: 'select_account' });
+        } else {
+          setError(response.error);
+          setIsLoading(false);
+        }
       } else {
-        handleTokenResponse(response);
+        setIsSignedIn(true);
+        setError(null);
+        setIsLoading(false);
       }
     };
 
+    client.callback = onToken;
+    setIsLoading(true);
     client.requestAccessToken({ prompt: '' });
-  }, [handleTokenResponse]);
+  }, []);
 
-  // 登出：撤銷 token + 清除 One Tap cookie（下次不自動登入）
+  // 登出：撤銷 token + 清除 One Tap 記憶
   const signOut = useCallback(() => {
     const token = window.gapi.client.getToken();
     if (token) {
