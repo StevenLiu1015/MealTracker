@@ -10,6 +10,12 @@ import { GOOGLE_CONFIG } from '../config';
  *                      → 若需互動 → requestAccessToken({ prompt: 'select_account' })
  *
  * 兩條路完全分開，不互相干擾
+ *
+ * 手機相容性修正：
+ *  - iOS Safari / Firefox 等不支援 One Tap，prompt callback 可能完全不觸發
+ *    → 加上 3 秒 timeout 保險，確保 loading 一定會結束
+ *  - cancel_on_tap_outside 改為 true，手機使用者可點外面關掉 One Tap
+ *    → 觸發 isDismissedMoment()，正常結束 loading 流程
  */
 export function useAuth() {
   const [isSignedIn, setIsSignedIn] = useState(false);
@@ -37,7 +43,7 @@ export function useAuth() {
         window.google.accounts.id.initialize({
           client_id: GOOGLE_CONFIG.CLIENT_ID,
           auto_select: true,
-          cancel_on_tap_outside: false,
+          cancel_on_tap_outside: true, // 手機上可點外面關掉 One Tap，觸發 isDismissedMoment
           callback: () => {
             // One Tap 身分確認成功 → 靜默取 access token
             client.callback = (response) => {
@@ -54,7 +60,16 @@ export function useAuth() {
           },
         });
 
+        // 保險 timeout：iOS Safari / Firefox 等不支援 One Tap，
+        // prompt callback 可能根本不會被呼叫，這時 3 秒後強制結束 loading
+        const promptTimeout = setTimeout(() => {
+          setIsLoading(false);
+        }, 3000);
+
         window.google.accounts.id.prompt((notification) => {
+          // callback 有觸發，取消 timeout
+          clearTimeout(promptTimeout);
+
           // 只要 One Tap 沒有自動完成（不論原因），就結束 loading 讓使用者手動登入
           if (
             notification.isNotDisplayed() ||
