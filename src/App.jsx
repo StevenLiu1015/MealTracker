@@ -56,7 +56,6 @@ function HpBar({ remaining, totalBudget }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
         <span style={{
           fontFamily: "'Press Start 2P'", fontSize: 22, color: barColor, letterSpacing: -1,
-          opacity: isLow && blink ? 0.45 : 1, transition: 'opacity 0.15s',
         }}>
           ¥{remaining >= 0 ? remaining : 0}
         </span>
@@ -152,6 +151,8 @@ export default function App() {
   );
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState({ item: '', category: '午餐', amount: '', date: todayStr() });
+  const [editingId, setEditingId] = useState(null);
+  const [editForm, setEditForm] = useState({});
   const [collapsedDates, setCollapsedDates] = useState({});
   const [shake, setShake] = useState(false);
   const [damageText, setDamageText] = useState(null);
@@ -179,6 +180,24 @@ export default function App() {
     setTimeout(() => setDamageText(null), 1200);
     setTimeout(() => setShake(false), 400);
     await addRecord(newRecord);
+  }
+
+  function handleEdit(r) {
+    setEditingId(r.id);
+    setEditForm({ item: r.item, category: r.category, amount: String(r.amount), date: r.date });
+  }
+
+  async function handleEditSave() {
+    if (!editForm.item || !editForm.amount) return;
+    await deleteRecord(editingId);
+    await addRecord({
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      date: editForm.date,
+      item: editForm.item,
+      category: editForm.category,
+      amount: Number(editForm.amount),
+    });
+    setEditingId(null);
   }
 
   function toggleDate(date) {
@@ -354,7 +373,7 @@ export default function App() {
             const isCollapsed = collapsedDates[date];
 
             return (
-              <div key={date} style={{ borderTop: gi === 0 ? 'none' : '2px solid #f3f4f6' }}>
+              <div key={date} style={{ borderTop: gi === 0 ? 'none' : '2px solid #1f2937' }}>
                 <button className="px-btn" onClick={() => toggleDate(date)}
                   style={{
                     width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -363,7 +382,7 @@ export default function App() {
                     background: isToday ? '#f0fdf4' : 'transparent',
                     boxShadow: 'none',
                   }}>
-                  <span style={{ fontFamily: "'Press Start 2P'", fontSize: 8, color: isToday ? '#22c55e' : '#6b7280' }}>
+                  <span style={{ fontFamily: "'Noto Sans TC'", fontSize: 13, fontWeight: 700, color: isToday ? '#22c55e' : '#6b7280' }}>
                     {isToday && '▶ '}{formatDate(date)}
                   </span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -373,33 +392,86 @@ export default function App() {
                 </button>
 
                 {!isCollapsed && dayRecords.map((r, ri) => (
-                  <div key={r.id} className="record-row"
-                    style={{
-                      display: 'flex', alignItems: 'center',
-                      padding: '10px 16px',
-                      background: ri % 2 === 0 ? '#fafafa' : '#fff',
-                      borderTop: '1px solid #f3f4f6', gap: 10,
+                  editingId === r.id ? (
+                    /* ── Edit form inline ── */
+                    <div key={r.id} style={{
+                      padding: '12px 16px', borderTop: '1px solid #f3f4f6',
+                      background: '#fffbeb', display: 'flex', flexDirection: 'column', gap: 10,
                     }}>
-                    <span style={{ fontSize: 16, flexShrink: 0 }}>{CATEGORY_ICON[r.category] || '🍽'}</span>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{
-                        fontFamily: "'Noto Sans TC'", fontSize: 14, fontWeight: 500, color: '#1f2937',
-                        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                      }}>{r.item}</div>
-                      <div style={{ fontFamily: "'Noto Sans TC'", fontSize: 11, color: '#9ca3af', marginTop: 2 }}>
-                        {r.category}
+                      <input className="px-input" placeholder="品項名稱"
+                        value={editForm.item}
+                        onChange={(e) => setEditForm((f) => ({ ...f, item: e.target.value }))}
+                      />
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                        {categoryList.map((cat) => {
+                          const active = editForm.category === cat;
+                          return (
+                            <button key={cat} className="px-btn"
+                              onClick={() => setEditForm((f) => ({ ...f, category: cat }))}
+                              style={{
+                                padding: '6px 9px', fontSize: 9,
+                                color: active ? '#fff' : '#6b7280',
+                                borderColor: active ? '#1f2937' : '#d1d5db',
+                                background: active ? '#1f2937' : 'transparent',
+                                boxShadow: active ? '2px 2px 0 #6b7280' : 'none',
+                              }}>
+                              {CATEGORY_ICON[cat] || ''} {cat}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                        <input className="px-input" type="number" placeholder="金額"
+                          value={editForm.amount}
+                          onChange={(e) => setEditForm((f) => ({ ...f, amount: e.target.value }))}
+                        />
+                        <input className="px-input" type="date" value={editForm.date}
+                          onChange={(e) => setEditForm((f) => ({ ...f, date: e.target.value }))}
+                        />
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                        <button className="px-btn" onClick={() => setEditingId(null)}
+                          style={{ padding: '9px', fontSize: 9, color: '#6b7280', borderColor: '#d1d5db', boxShadow: '2px 2px 0 #d1d5db' }}>
+                          CANCEL
+                        </button>
+                        <button className="px-btn" onClick={handleEditSave}
+                          style={{ padding: '9px', fontSize: 9, color: '#fff', borderColor: '#1f2937', background: '#22c55e', boxShadow: '3px 3px 0 #1f2937' }}>
+                          SAVE
+                        </button>
                       </div>
                     </div>
-                    <span style={{ fontFamily: "'Press Start 2P'", fontSize: 11, color: '#ef4444', flexShrink: 0 }}>
-                      -{r.amount}
-                    </span>
-                    <button className="px-btn del-btn" onClick={() => deleteRecord(r.id)}
+                  ) : (
+                    /* ── Normal row ── */
+                    <div key={r.id} className="record-row"
                       style={{
-                        padding: '4px 7px', fontSize: 10,
-                        color: '#ef4444', borderColor: '#fca5a5',
-                        boxShadow: 'none', lineHeight: 1, flexShrink: 0,
-                      }}>×</button>
-                  </div>
+                        display: 'flex', alignItems: 'center',
+                        padding: '10px 16px',
+                        background: ri % 2 === 0 ? '#fafafa' : '#fff',
+                        borderTop: '1px solid #f3f4f6', gap: 10,
+                      }}>
+                      <span style={{ fontSize: 16, flexShrink: 0 }}>{CATEGORY_ICON[r.category] || '🍽'}</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{
+                          fontFamily: "'Noto Sans TC'", fontSize: 14, fontWeight: 500, color: '#1f2937',
+                          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                        }}>{r.item}</div>
+                        <div style={{ fontFamily: "'Noto Sans TC'", fontSize: 11, color: '#9ca3af', marginTop: 2 }}>
+                          {r.category}
+                        </div>
+                      </div>
+                      <span style={{ fontFamily: "'Press Start 2P'", fontSize: 11, color: '#ef4444', flexShrink: 0 }}>
+                        -{r.amount}
+                      </span>
+                      <button className="px-btn del-btn" onClick={() => handleEdit(r)}
+                        style={{ padding: '4px 7px', fontSize: 10, color: '#6b7280', borderColor: '#d1d5db', boxShadow: 'none', lineHeight: 1, flexShrink: 0 }}>
+                        ✎
+                      </button>
+                      <button className="px-btn del-btn" onClick={() => deleteRecord(r.id)}
+                        style={{ padding: '4px 7px', fontSize: 10, color: '#ef4444', borderColor: '#fca5a5', boxShadow: 'none', lineHeight: 1, flexShrink: 0 }}>
+                        ×
+                      </button>
+                    </div>
+                  )
                 ))}
               </div>
             );
